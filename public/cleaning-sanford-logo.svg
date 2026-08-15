@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 48" role="img" aria-label="Cleaning Sanford">
+  <defs>
+    <linearGradient id="mark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f5c5b"/>
+      <stop offset="100%" stop-color="#3d7a5c"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="6" width="36" height="36" rx="10" fill="url(#mark)"/>
+  <path d="M12 28c4-8 10-12 16-14-2 6-3 12-2 18-5-1-10-2-14-4z" fill="#ebe4d8" opacity="0.95"/>
+  <path d="M14 20h12M16 24h8" stroke="#fffcf7" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="48" y="22" font-family="Georgia, 'Times New Roman', serif" font-size="16" font-weight="700" fill="#0f5c5b">Cleaning</text>
+  <text x="48" y="40" font-family="Georgia, 'Times New Roman', serif" font-size="16" font-weight="700" fill="#1a2e2c">Sanford</text>
+</svg>

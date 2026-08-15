@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f4ef;
+  --foreground: #1a2e2c;
+  --brand: #0f5c5b;
+  --brand-light: #1a7a78;
+  --brand-muted: rgba(15, 92, 91, 0.1);
+  --pine: #3d7a5c;
+  --sand: #ebe4d8;
+  --surface: #fffcf7;
+  --border: #d9d0c3;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+body {
+  background:
+    radial-gradient(ellipse 120% 80% at 10% -10%, rgba(15, 92, 91, 0.07), transparent 50%),
+    radial-gradient(ellipse 80% 60% at 100% 0%, rgba(61, 122, 92, 0.06), transparent 45%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+/* Section rhythm */
+.section-eyebrow {
+  @apply text-xs font-semibold uppercase tracking-widest text-[#0f5c5b];
+}
+
+.section-title {
+  @apply text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.section-subtitle {
+  @apply mt-3 max-w-2xl text-base leading-relaxed text-slate-600;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-xl bg-[#0f5c5b] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a7a78] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5c5b];
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-xl border border-[#0f5c5b] px-6 py-3 text-sm font-semibold text-[#0f5c5b] transition hover:bg-[#0f5c5b]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5c5b];
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center rounded-xl border border-[#d9d0c3] bg-white/80 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#0f5c5b]/40 hover:bg-[#fffcf7];
+}
+
+/* Cards */
+.card {
+  @apply rounded-2xl border border-[#d9d0c3]/80 bg-[#fffcf7] shadow-sm;
+}
+
+.card-hover {
+  @apply transition duration-200 hover:-translate-y-0.5 hover:border-[#0f5c5b]/30 hover:shadow-md;
+}
+
+/* Form controls */
+.input-field {
+  @apply w-full rounded-xl border border-[#d9d0c3] bg-white px-4 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-[#0f5c5b] focus:outline-none focus:ring-2 focus:ring-[#0f5c5b]/20;
+}
+
+.select-field {
+  @apply w-full appearance-none rounded-xl border border-[#d9d0c3] bg-white px-4 py-2.5 pr-10 text-sm text-slate-900 transition focus:border-[#0f5c5b] focus:outline-none focus:ring-2 focus:ring-[#0f5c5b]/20;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-size: 1.25rem;
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+}
+
+/* Decorative */
+.gradient-hero {
+  background: linear-gradient(
+    135deg,
+    rgba(15, 92, 91, 0.12) 0%,
+    rgba(247, 244, 239, 1) 42%,
+    rgba(61, 122, 92, 0.08) 100%
+  );
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.7s ease-out both;
+}
+
+.animate-fade-up-delay {
+  animation: fade-up 0.7s ease-out 0.15s both;
+}
+
+.animate-fade-up-delay-2 {
+  animation: fade-up 0.7s ease-out 0.3s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-up-delay,
+  .animate-fade-up-delay-2 {
+    animation: none;
+  }
+}
+
+.text-shadow-sm {
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+}

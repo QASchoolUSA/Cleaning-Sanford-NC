@@ -1,0 +1,22 @@
+{
+  "name": "Cleaning Sanford",
+  "short_name": "Cleaning Sanford",
+  "description": "Professional cleaning services in Sanford, North Carolina and Lee County.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f4ef",
+  "theme_color": "#0f5c5b",
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/icons/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
