@@ -10,7 +10,9 @@ Not the same product as **Sanford Cleaning** (Florida).
 |---|---|---|
 | Next.js web app | `pnpm dev` | 3000 |
 
-Scripts: `dev`, `build`, `start`, `lint`, `test:booking`, `icons`, `og`, `assets`.
+Scripts: `dev`, `build` (OpenNext/Cloudflare), `build:next`, `deploy`, `start`, `lint`, `test:booking`, `icons`, `og`, `assets`.
+
+Deployed to **Cloudflare Workers** via `@opennextjs/cloudflare`. Cloudflare build should run `pnpm run build` (OpenNext), then `npx wrangler deploy` / `pnpm exec wrangler deploy` with committed `wrangler.jsonc`.
 
 ## Environment
 

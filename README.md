@@ -12,6 +12,15 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Cloudflare
+
+```bash
+pnpm build          # OpenNext → .open-next/
+pnpm exec wrangler deploy
+# or
+pnpm deploy
+```
+
 ## Brand & contact
 
 - Brand: **Cleaning Sanford** (not Sanford Cleaning / FL)
