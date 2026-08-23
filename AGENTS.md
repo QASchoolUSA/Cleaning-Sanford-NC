@@ -20,7 +20,7 @@ Copy `.env.example` to `.env.local`:
 
 | Variable | Purpose |
 |---|---|
-| `BOOKING_BROOM_URL` | Booking Broom base URL |
+| `BOOKING_BROOM_URL` | Optional; defaults to `https://app.bookingbroom.com` |
 | `BOOKING_BROOM_API_KEY` | `bb_sanford-nc_dev_key` (or rotated prod key) |
 | `BOOKING_BROOM_SITE_SLUG` | `sanford-nc` |
 | `NEXT_PUBLIC_SITE_URL` | Production: `https://cleaningsanford.com` |

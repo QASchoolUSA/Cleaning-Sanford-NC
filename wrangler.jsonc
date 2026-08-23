@@ -1,29 +1,47 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
-  "name": "cleaning-sanford-nc",
-  "compatibility_date": "2026-08-15",
-  "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "cleaning-sanford-nc"
-    }
-  ],
-  "images": {
-    "binding": "IMAGES"
-  },
-  "observability": {
-    "enabled": true
-  },
-  "vars": {
-    "BOOKING_BROOM_URL": "https://bookings.kedrik.com",
-    "BOOKING_BROOM_SITE_SLUG": "sanford-nc",
-    "BOOKING_BROOM_API_KEY": "bb_sanford-nc_dev_key",
-    "NEXT_PUBLIC_SITE_URL": "https://cleaningsanford.com"
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": "worker.ts",
+	"name": "cleaning-sanford-nc",
+	"compatibility_date": "2026-08-15",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "cleaning-sanford-nc"
+		}
+	],
+	"images": {
+		"binding": "IMAGES"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"triggers": {
+		"crons": [
+			"*/5 * * * *"
+		]
+	},
+	"kv_namespaces": [
+		{
+			"binding": "BOOKING_OUTBOX",
+			"id": "REPLACE_WITH_BOOKING_OUTBOX_KV_ID",
+			"preview_id": "REPLACE_WITH_BOOKING_OUTBOX_KV_PREVIEW_ID"
+		},
+		{
+			"binding": "BOOKING_OUTBOX_SANFORD_NC",
+			"id": "2f9a5c154bed4c9a995688abc6d3301d",
+			"remote": true
+		}
+	],
+	"vars": {
+		"BOOKING_BROOM_SITE_SLUG": "sanford-nc",
+		"BOOKING_BROOM_API_KEY": "bb_sanford-nc_dev_key",
+		"NEXT_PUBLIC_SITE_URL": "https://cleaningsanford.com"
+	}
 }
