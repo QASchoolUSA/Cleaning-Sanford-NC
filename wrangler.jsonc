@@ -40,7 +40,6 @@
 		}
 	],
 	"vars": {
-		"BOOKING_BROOM_SITE_SLUG": "sanford-nc",
 		"BOOKING_BROOM_API_KEY": "bb_sanford-nc_dev_key",
 		"NEXT_PUBLIC_SITE_URL": "https://cleaningsanford.com"
 	}

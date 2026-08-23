@@ -22,7 +22,7 @@ Copy `.env.example` to `.env.local`:
 |---|---|
 | `BOOKING_BROOM_URL` | Optional; defaults to `https://app.bookingbroom.com` |
 | `BOOKING_BROOM_API_KEY` | `bb_sanford-nc_dev_key` (or rotated prod key) |
-| `BOOKING_BROOM_SITE_SLUG` | `sanford-nc` |
+| `BOOKING_BROOM_SITE_SLUG` | Not needed; hardcoded to `sanford-nc` |
 | `NEXT_PUBLIC_SITE_URL` | Production: `https://cleaningsanford.com` |
 | `NEXT_PUBLIC_BUSINESS_PHONE` | Optional E.164 (empty until provided) |
 | `NEXT_PUBLIC_BUSINESS_PHONE_DISPLAY` | Optional display string |

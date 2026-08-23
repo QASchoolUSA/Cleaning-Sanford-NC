@@ -31,7 +31,7 @@ export const siteDescription =
   "Professional house, residential, move-out, Airbnb, commercial, and post-construction cleaning in Sanford, North Carolina and Lee County. Licensed & insured. Instant online quote.";
 
 export const bookingBroomSiteSlug =
-  process.env.BOOKING_BROOM_SITE_SLUG ?? "sanford-nc";
+  "sanford-nc";
 
 export const googleBusinessUrl =
   process.env.NEXT_PUBLIC_GBP_URL ?? "";
