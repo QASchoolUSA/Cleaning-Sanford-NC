@@ -27,18 +27,6 @@
 			"*/5 * * * *"
 		]
 	},
-	"kv_namespaces": [
-		{
-			"binding": "BOOKING_OUTBOX",
-			"id": "REPLACE_WITH_BOOKING_OUTBOX_KV_ID",
-			"preview_id": "REPLACE_WITH_BOOKING_OUTBOX_KV_PREVIEW_ID"
-		},
-		{
-			"binding": "BOOKING_OUTBOX_SANFORD_NC",
-			"id": "2f9a5c154bed4c9a995688abc6d3301d",
-			"remote": true
-		}
-	],
 	"vars": {
 		"BOOKING_BROOM_API_KEY": "bb_sanford-nc_dev_key",
 		"NEXT_PUBLIC_SITE_URL": "https://cleaningsanford.com"
