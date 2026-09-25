@@ -110,10 +110,10 @@ function CostOfCleaningArticle({ config }: { config: PricingConfig }) {
           <strong>Cleaning level</strong> — standard, deep, or move-in/out
         </li>
         <li>
-          <strong>Add-ons</strong> — inside fridge, oven, windows, cabinets, baseboards
+          <strong>Add-ons</strong> — kitchen deep clean, oven, fridge, windows, and more
         </li>
         <li>
-          <strong>Frequency</strong> — recurring clients often get better per-visit value
+          <strong>Frequency</strong> — weekly, bi-weekly, and monthly discounts
         </li>
       </ul>
 

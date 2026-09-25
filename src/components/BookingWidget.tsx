@@ -3,16 +3,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createSoftLeadTracker } from "@/lib/soft-lead";
 import PropertyDetailsStep from "@/components/PropertyDetailsStep";
 import {
-  ADDON_KEYS,
+  ADDON_IDS,
   DEFAULT_PRICING_CONFIG,
+  SERVICE_LABELS,
   addOnLabels,
-  computeQuote,
+  calculatePrice,
+  estimateRange,
+  frequencyLabels,
   propertySummary,
   selectedAddOnLines,
-  sqftBandLabel,
+  sqftPresetLabel,
+  type AddonId,
+  type FrequencyId,
   type PricingConfig,
-  type ServiceType,
-  type SqftBand,
+  type ServiceTypeId,
 } from "@/lib/pricing";
 import {
   businessEmail,
@@ -21,13 +25,15 @@ import {
   telHref,
 } from "@/lib/site";
 
-const SERVICE_OPTIONS: { value: ServiceType; label: string; desc: string }[] = [
-  { value: "residential", label: "Residential", desc: "Homes & apartments" },
-  { value: "commercial", label: "Commercial", desc: "Offices & retail" },
+const SERVICE_OPTIONS: { value: ServiceTypeId; label: string; desc: string }[] = [
+  { value: "house", label: "House Cleaning", desc: "Standard home clean" },
+  { value: "apartment", label: "Apartment Cleaning", desc: "Flats & condos" },
+  { value: "maintenance", label: "Maintenance Cleaning", desc: "Recurring upkeep" },
+  { value: "deep", label: "Deep Cleaning", desc: "Detail-heavy reset" },
+  { value: "move", label: "Move In / Move Out", desc: "Empty-unit turnover" },
+  { value: "airbnb", label: "Airbnb Turnover", desc: "Guest-ready between stays" },
   { value: "post-construction", label: "Post‑Construction", desc: "Dust & debris cleanup" },
 ];
-
-type LevelType = "standard" | "deep" | "move" | "post";
 
 const STEPS = ["Service", "Home", "Options", "Schedule", "Contact", "Review"] as const;
 const CONTACT_STEP = 4;
@@ -60,12 +66,12 @@ export default function BookingWidget({
   if (!softLead.current) {
     softLead.current = createSoftLeadTracker();
   }
-  const [serviceType, setServiceType] = useState<ServiceType>("residential");
+  const [serviceType, setServiceType] = useState<ServiceTypeId>("house");
   const [bedrooms, setBedrooms] = useState(2);
   const [bathrooms, setBathrooms] = useState(2);
-  const [sqftBand, setSqftBand] = useState<SqftBand | null>(config.defaultSqftBand);
-  const [level, setLevel] = useState<LevelType>("standard");
-  const [addOns, setAddOns] = useState({ fridge: false, oven: false, windows: false, cabinets: false, baseboards: false });
+  const [sqft, setSqft] = useState(config.sqftPresets[2]?.value ?? 1600);
+  const [frequency, setFrequency] = useState<FrequencyId>("one-time");
+  const [addons, setAddons] = useState<AddonId[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [name, setName] = useState("");
@@ -78,28 +84,28 @@ export default function BookingWidget({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [contactErrors, setContactErrors] = useState<ContactErrors>({});
 
-  const effectiveLevel: LevelType = useMemo(() => {
-    if (serviceType === "post-construction") return "post";
-    if (level === "post") return "standard";
-    return level;
-  }, [serviceType, level]);
-
   const quote = useMemo(
     () =>
-      computeQuote(
-        { serviceType, bedrooms, bathrooms, sqftBand, level: effectiveLevel, addOns },
-        config
+      calculatePrice(
+        { serviceType, bedrooms, bathrooms, sqft, frequency, addons },
+        config,
       ),
-    [serviceType, bedrooms, bathrooms, sqftBand, effectiveLevel, addOns, config]
+    [serviceType, bedrooms, bathrooms, sqft, frequency, addons, config],
   );
+  const range = estimateRange(quote.total);
 
   const labels = useMemo(() => addOnLabels(config), [config]);
-  const sizeLabel = propertySummary({ serviceType, bedrooms, bathrooms, sqftBand }, config);
-  const serviceLabel = SERVICE_OPTIONS.find((o) => o.value === serviceType)?.label ?? serviceType;
-  const levelLabel =
-    effectiveLevel === "move" ? "Move‑in/out" : effectiveLevel.charAt(0).toUpperCase() + effectiveLevel.slice(1);
-  const addOnLines = selectedAddOnLines(addOns, config);
+  const freqLabels = useMemo(() => frequencyLabels(config), [config]);
+  const sizeLabel = propertySummary({ bedrooms, bathrooms, sqft }, config);
+  const serviceLabel = SERVICE_LABELS[serviceType];
+  const addOnLines = selectedAddOnLines(addons, config);
   const selectedAddOns = addOnLines.map((a) => a.label);
+
+  function toggleAddon(id: AddonId) {
+    setAddons((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  }
 
   function buildPayload(intent: "quote" | "book") {
     return {
@@ -107,29 +113,29 @@ export default function BookingWidget({
       email,
       phone,
       address,
-      service_type: `${serviceLabel} — ${levelLabel}`,
+      service_type: serviceLabel,
       preferred_date: date || undefined,
       preferred_time: time || undefined,
       intent,
       session_key: softLead.current?.sessionKey,
       property: {
-        bedrooms: serviceType === "residential" ? bedrooms : undefined,
+        bedrooms,
         bathrooms,
-        size_label: sqftBandLabel(sqftBand, config) ?? undefined,
+        size_label: sqftPresetLabel(sqft, config),
         home_type: serviceLabel,
       },
       quote: {
-        estimate: quote.price,
-        estimate_low: quote.range.low,
-        estimate_high: quote.range.high,
+        estimate: quote.total,
+        estimate_low: range.low,
+        estimate_high: range.high,
         currency: "USD",
-        service_level: levelLabel,
+        service_level: serviceLabel,
+        frequency: freqLabels[frequency],
         add_ons: addOnLines,
         payment_terms: "Due after cleaning is complete",
       },
     };
   }
-
 
   useEffect(() => {
     const tracker = softLead.current;
@@ -142,7 +148,6 @@ export default function BookingWidget({
       ...buildPayload("quote"),
       last_step: STEPS[step] ?? String(step),
     });
-    // Snapshot from latest render whenever contact-relevant fields change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     booked,
@@ -156,12 +161,12 @@ export default function BookingWidget({
     serviceType,
     bedrooms,
     bathrooms,
-    sqftBand,
-    effectiveLevel,
-    addOns,
-    quote.price,
-    quote.range.low,
-    quote.range.high,
+    sqft,
+    frequency,
+    addons,
+    quote.total,
+    range.low,
+    range.high,
   ]);
 
   async function submitPayload(intent: "quote" | "book") {
@@ -174,7 +179,6 @@ export default function BookingWidget({
 
     setSubmitting(true);
     setSubmitError(null);
-
     try {
       const res = await fetch("/api/book", {
         method: "POST",
@@ -197,14 +201,6 @@ export default function BookingWidget({
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function handleBook() {
-    return submitPayload("book");
-  }
-
-  function handleQuoteRequest() {
-    return submitPayload("quote");
   }
 
   function next() {
@@ -238,7 +234,7 @@ export default function BookingWidget({
           <div className="rounded-xl bg-[#1a7a78]/10 p-4">
             <p className="text-sm font-medium text-slate-900">Pay when we&apos;re done</p>
             <p className="mt-1 text-sm text-slate-600">
-              No upfront payment required. Your estimated total of <strong>${quote.price}</strong> is due after your cleaning is complete and you&apos;re satisfied.
+              No upfront payment required. Your estimated total of <strong>${quote.total}</strong> is due after your cleaning is complete and you&apos;re satisfied.
             </p>
           </div>
           <p className="text-sm text-slate-600">
@@ -279,7 +275,7 @@ export default function BookingWidget({
           </div>
           <div className="shrink-0 rounded-xl bg-white px-3 py-2 text-right shadow-sm ring-1 ring-slate-100">
             <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Estimate</p>
-            <p className="text-lg font-bold text-[#0f5c5b]">${quote.price}</p>
+            <p className="text-lg font-bold text-[#0f5c5b]">${quote.total}</p>
           </div>
         </div>
       </div>
@@ -345,42 +341,47 @@ export default function BookingWidget({
 
         {step === 1 && (
           <PropertyDetailsStep
-            serviceType={serviceType}
             bedrooms={bedrooms}
             bathrooms={bathrooms}
-            sqftBand={sqftBand}
+            sqft={sqft}
             config={config}
             onBedroomsChange={setBedrooms}
             onBathroomsChange={setBathrooms}
-            onSqftBandChange={setSqftBand}
+            onSqftChange={setSqft}
           />
         )}
 
         {step === 2 && (
           <div className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Cleaning level</label>
+              <label className="mb-2 block text-sm font-medium text-slate-700">How often?</label>
               <select
                 className="select-field"
-                value={effectiveLevel}
-                onChange={(e) => setLevel(e.target.value as LevelType)}
-                disabled={serviceType === "post-construction"}
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as FrequencyId)}
               >
-                <option value="standard">Standard</option>
-                <option value="deep">Deep clean</option>
-                <option value="move">Move‑in / move‑out</option>
+                {config.frequencyMultipliers.map((freq) => (
+                  <option key={freq.key} value={freq.key}>
+                    {freq.label}
+                    {freq.multiplier < 1
+                      ? ` (${Math.round((1 - freq.multiplier) * 100)}% off)`
+                      : ""}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <p className="mb-3 text-sm font-medium text-slate-700">Optional add‑ons</p>
               <div className="flex flex-wrap gap-2">
-                {ADDON_KEYS.map((key) => (
+                {ADDON_IDS.map((key) => (
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setAddOns({ ...addOns, [key]: !addOns[key] })}
+                    onClick={() => toggleAddon(key)}
                     className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
-                      addOns[key] ? "bg-[#0f5c5b] text-white" : "bg-slate-100 text-slate-600 hover:bg-[#1a7a78]/20"
+                      addons.includes(key)
+                        ? "bg-[#0f5c5b] text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-[#1a7a78]/15"
                     }`}
                   >
                     {labels[key]}
@@ -393,147 +394,167 @@ export default function BookingWidget({
 
         {step === 3 && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Preferred date</span>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">Preferred date</label>
               <input type="date" className="input-field" value={date} onChange={(e) => setDate(e.target.value)} />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Preferred time</span>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">Preferred time</label>
               <input type="time" className="input-field" value={time} onChange={(e) => setTime(e.target.value)} />
-            </label>
-            <p className="sm:col-span-2 text-xs text-slate-500">We&apos;ll confirm availability and send a reminder before your appointment.</p>
+            </div>
+            <p className="text-xs text-slate-500 sm:col-span-2">
+              We&apos;ll confirm availability and send a reminder before your appointment.
+            </p>
           </div>
         )}
 
         {step === CONTACT_STEP && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <p className="sm:col-span-2 text-xs text-slate-500">Fields marked with <span className="text-[#0f5c5b]">*</span> are required to send your quote or book a cleaning.</p>
-            <label className="block sm:col-span-2">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Full name <span className="text-[#0f5c5b]">*</span></span>
+            <p className="text-xs text-slate-500 sm:col-span-2">
+              Fields marked with <span className="text-[#0f5c5b]">*</span> are required to send your quote or book a cleaning.
+            </p>
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Full name <span className="text-[#0f5c5b]">*</span>
+              </label>
               <input
                 type="text"
                 className={`input-field ${contactErrors.name ? "ring-2 ring-red-400" : ""}`}
                 value={name}
-                onChange={(e) => { setName(e.target.value); setContactErrors((prev) => ({ ...prev, name: undefined })); }}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setContactErrors((prev) => ({ ...prev, name: undefined }));
+                }}
                 placeholder="Jane Smith"
                 required
                 autoComplete="name"
               />
               {contactErrors.name && <p className="mt-1 text-xs text-red-600">{contactErrors.name}</p>}
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Email <span className="text-[#0f5c5b]">*</span></span>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Email <span className="text-[#0f5c5b]">*</span>
+              </label>
               <input
                 type="email"
                 className={`input-field ${contactErrors.email ? "ring-2 ring-red-400" : ""}`}
                 value={email}
-                onChange={(e) => { setEmail(e.target.value); setContactErrors((prev) => ({ ...prev, email: undefined })); }}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setContactErrors((prev) => ({ ...prev, email: undefined }));
+                }}
                 placeholder="you@email.com"
                 required
                 autoComplete="email"
               />
               {contactErrors.email && <p className="mt-1 text-xs text-red-600">{contactErrors.email}</p>}
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Phone <span className="text-[#0f5c5b]">*</span></span>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Phone <span className="text-[#0f5c5b]">*</span>
+              </label>
               <input
                 type="tel"
                 className={`input-field ${contactErrors.phone ? "ring-2 ring-red-400" : ""}`}
                 value={phone}
-                onChange={(e) => { setPhone(e.target.value); setContactErrors((prev) => ({ ...prev, phone: undefined })); }}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setContactErrors((prev) => ({ ...prev, phone: undefined }));
+                }}
                 placeholder="(919) 555-0123"
                 required
                 autoComplete="tel"
               />
               {contactErrors.phone && <p className="mt-1 text-xs text-red-600">{contactErrors.phone}</p>}
-            </label>
-            <label className="block sm:col-span-2">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Service address <span className="text-[#0f5c5b]">*</span></span>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Service address <span className="text-[#0f5c5b]">*</span>
+              </label>
               <input
                 type="text"
                 className={`input-field ${contactErrors.address ? "ring-2 ring-red-400" : ""}`}
                 value={address}
-                onChange={(e) => { setAddress(e.target.value); setContactErrors((prev) => ({ ...prev, address: undefined })); }}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  setContactErrors((prev) => ({ ...prev, address: undefined }));
+                }}
                 placeholder="123 Main St, Sanford, NC"
                 required
                 autoComplete="street-address"
               />
               {contactErrors.address && <p className="mt-1 text-xs text-red-600">{contactErrors.address}</p>}
-            </label>
+            </div>
           </div>
         )}
 
         {step === 5 && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 text-sm">
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm">
               <dl className="space-y-2.5">
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Service</dt><dd className="font-medium text-slate-900">{serviceLabel}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Home</dt><dd className="text-right font-medium text-slate-900">{sizeLabel}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-slate-500">Level</dt><dd className="font-medium text-slate-900">{levelLabel}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-slate-500">Frequency</dt><dd className="font-medium text-slate-900">{freqLabels[frequency]}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Add‑ons</dt><dd className="font-medium text-slate-900">{selectedAddOns.join(", ") || "None"}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">When</dt><dd className="font-medium text-slate-900">{date || "Flexible"} {time && `at ${time}`}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-slate-500">Contact</dt><dd className="text-right font-medium text-slate-900">{name}<br /><span className="text-xs font-normal text-slate-500">{email}<br />{phone}</span></dd></div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate-500">Contact</dt>
+                  <dd className="text-right font-medium text-slate-900">
+                    {name}<br />
+                    <span className="text-xs font-normal text-slate-500">{email}<br />{phone}</span>
+                  </dd>
+                </div>
                 <div className="flex justify-between gap-4"><dt className="text-slate-500">Address</dt><dd className="text-right font-medium text-slate-900">{address}</dd></div>
               </dl>
             </div>
             <div className="rounded-xl bg-[#1a7a78]/10 p-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0f5c5b]/10 text-[#0f5c5b]">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="20" height="14" x="2" y="5" rx="2" /><path d="M2 10h20" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Estimated total: ${quote.price}</p>
-                  <p className="mt-0.5 text-xs text-slate-600">Range ${quote.range.low}–${quote.range.high} · Pay after completion</p>
-                  <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                    Book now with zero upfront payment. We&apos;ll send your final invoice once the job is done and you&apos;re happy with the results.
-                  </p>
-                </div>
-              </div>
+              <p className="text-sm font-semibold text-slate-900">Estimated total: ${quote.total}</p>
+              <p className="mt-0.5 text-xs text-slate-600">Range ${range.low}–${range.high} · Pay after completion</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                Book now with zero upfront payment. We&apos;ll send your final invoice once the job is done and you&apos;re happy with the results.
+              </p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
-        <button type="button" className="btn-ghost" onClick={prev} disabled={step === 0}>
-          Back
-        </button>
+      <div className="mt-4 space-y-3 border-t border-slate-100 px-6 py-4">
         {submitError && (
-          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{submitError}</p>
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{submitError}</p>
         )}
-        {step < STEPS.length - 1 ? (
-          <button type="button" className="btn-primary px-5 py-2.5" onClick={next}>
-            Continue
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" className="btn-ghost" onClick={prev} disabled={step === 0}>
+            Back
           </button>
-        ) : (
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              type="button"
-              className="btn-primary px-4 py-2.5 text-xs sm:text-sm disabled:opacity-60"
-              disabled={submitting}
-              onClick={handleQuoteRequest}
-            >
-              {submitting ? "Sending…" : "Request quote"}
+          {step < STEPS.length - 1 ? (
+            <button type="button" className="btn-primary" onClick={next}>
+              Continue
             </button>
-            <button
-              type="button"
-              className="btn-ghost px-4 py-2.5 text-xs sm:text-sm disabled:opacity-60"
-              onClick={handleBook}
-              disabled={submitting}
-            >
-              {submitting ? "Sending…" : "Book cleaning"}
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={submitting}
+                onClick={() => submitPayload("quote")}
+              >
+                {submitting ? "Sending…" : "Request quote"}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={submitting}
+                onClick={() => submitPayload("book")}
+              >
+                {submitting ? "Sending…" : "Book cleaning"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-3">
-        <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
+      <div className="border-t border-slate-100 bg-slate-50 px-6 py-3">
+        <p className="text-center text-[11px] text-slate-500">
           No payment required to book · Pay when your clean is complete
         </p>
       </div>

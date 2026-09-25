@@ -21,14 +21,12 @@ export default function MoveOutChecklistArticle({
     levelAdjustments(config).find((level) => level.key === "move")?.uplift ?? 0;
   const moveOutQuote = computeQuote(
     {
-      serviceType: "residential",
+      serviceType: "move",
       bedrooms: 2,
       bathrooms: 1,
-      sqftBand: config.defaultSqftBand,
-      level: "move",
-      addOns: {},
+      sqft: 1000,
     },
-    config
+    config,
   );
 
   return (
