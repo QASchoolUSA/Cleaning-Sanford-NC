@@ -55,6 +55,7 @@ export default function Header() {
 
             <Link href="/pricing" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#0f5c5b]">Pricing</Link>
             <Link href="/areas/jonesboro" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#0f5c5b]">Areas</Link>
+            <Link href="/communities" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#0f5c5b]">Communities</Link>
             <Link href="/blog" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#0f5c5b]">Blog</Link>
             <Link href="/about" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#0f5c5b]">About</Link>
             <Link href="/#benefits" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#0f5c5b]">Why Us</Link>
