@@ -1,40 +1,32 @@
 import {
   DEFAULT_PRICING_CONFIG,
-  bedroomLabel,
+  SERVICE_LABELS,
   type PricingConfig,
+  type ServiceTypeId,
 } from "@/lib/pricing";
 
-export type PriceRow = { label: string; price: number };
+export type PriceRow = { label: string; price: number; detail?: string };
 
-/** Derived from the live quote engine so the page can never drift from the calculator. */
-export function residentialRows(
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
+/** Starting floors per service (minBase) for the pricing page. */
+export function serviceRows(
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
 ): PriceRow[] {
-  return config.bedroomBase.map((row) => ({
-    label: bedroomLabel(row.bedrooms, config),
-    price: row.price,
+  return config.serviceRates.map((rate) => ({
+    label: SERVICE_LABELS[rate.key as ServiceTypeId] ?? rate.key,
+    price: rate.minBase,
+    detail: `$${rate.perSqft.toFixed(2)}/sq ft`,
   }));
 }
 
-export function commercialRows(
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): PriceRow[] {
-  return config.sqftBands.map((band) => ({
-    label: band.label,
-    price: config.commercialByBand.find((b) => b.key === band.key)?.value ?? 0,
-  }));
+export function bedroomRate(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
+  return config.bedroomRate;
 }
 
-export function postRows(
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): PriceRow[] {
-  return config.sqftBands.map((band) => ({
-    label: band.label,
-    price: config.postByBand.find((b) => b.key === band.key)?.value ?? 0,
-  }));
+export function bathroomRate(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
+  return config.bathroomRate;
 }
 
-/** Each bathroom past the first. */
+/** @deprecated Prefer bathroomRate — kept for call sites that said bathRate. */
 export function bathRate(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
-  return config.bathRate;
+  return config.bathroomRate;
 }

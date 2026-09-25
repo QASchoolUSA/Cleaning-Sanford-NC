@@ -2,12 +2,10 @@ import { createPageMetadata } from "@/lib/metadata";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  bathRate,
-  commercialRows,
-  postRows,
-  residentialRows,
+  bathroomRate,
+  bedroomRate,
+  serviceRows,
 } from "@/lib/pricing-display";
-import { levelAdjustments } from "@/lib/pricing";
 import { getPricingConfig } from "@/lib/pricing-config";
 import ServiceBookingSection from "@/components/ServiceBookingSection";
 import { siteImages } from "@/lib/images";
@@ -15,7 +13,7 @@ import { siteImages } from "@/lib/images";
 export const metadata = createPageMetadata({
   title: "Cleaning Service Prices in Sanford, NC",
   description:
-    "Transparent cleaning prices for Sanford homes and businesses. Residential, commercial, and post-construction rates with instant online quotes.",
+    "Transparent cleaning prices for Sanford homes and businesses. Per-square-foot rates with bedroom and bathroom add-ons — get an instant online quote.",
   path: "/pricing",
   ogImage: "/og/pricing.jpg",
   keywords: [
@@ -28,11 +26,9 @@ export const metadata = createPageMetadata({
 
 export default async function PricingPage() {
   const config = await getPricingConfig();
-  const extraBath = bathRate(config);
-  /** Post-construction is priced from its own table, so it is not an uplift row. */
-  const upliftRows = levelAdjustments(config).filter(
-    (level) => level.key !== "post"
-  );
+  const rows = serviceRows(config);
+  const bed = bedroomRate(config);
+  const bath = bathroomRate(config);
 
   return (
     <main>
@@ -42,7 +38,8 @@ export default async function PricingPage() {
             <p className="section-eyebrow">Transparent pricing</p>
             <h1 className="section-title mt-2">Cleaning Service Prices in Sanford, NC</h1>
             <p className="section-subtitle">
-              Starting rates for common jobs. Your final quote depends on size, level, and add-ons — get an
+              Starting rates use square footage with a service minimum, plus ${bed} per bedroom and $
+              {bath} per bathroom. Your final quote depends on size, frequency, and add-ons — get an
               instant estimate online.
             </p>
           </div>
@@ -58,85 +55,46 @@ export default async function PricingPage() {
           </div>
         </div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-3">
-          <section className="card p-6">
-            <h2 className="text-xl font-bold text-slate-900">Residential</h2>
+        <div className="mt-12 grid gap-8 lg:grid-cols-2">
+          <section className="card p-6 lg:col-span-2">
+            <h2 className="text-xl font-bold text-slate-900">Service starting rates</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Standard home cleaning, one bathroom included.
+              Floor price and per-square-foot rate for each service. Larger homes quote above the
+              minimum when sq ft × rate exceeds the floor.
             </p>
-            <ul className="mt-6 space-y-3 text-sm text-slate-700">
-              {residentialRows(config).map((row) => (
-                <li key={row.label} className="flex justify-between border-b border-slate-100 pb-2">
-                  <span>{row.label}</span>
-                  <span className="font-semibold text-[#0f5c5b]">from ${row.price}</span>
+            <ul className="mt-6 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+              {rows.map((row) => (
+                <li
+                  key={row.label}
+                  className="flex justify-between gap-4 border-b border-slate-100 pb-2"
+                >
+                  <span>
+                    {row.label}
+                    {row.detail ? (
+                      <span className="mt-0.5 block text-xs text-slate-500">{row.detail}</span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 font-semibold text-[#0f5c5b]">from ${row.price}</span>
                 </li>
               ))}
             </ul>
             <p className="mt-4 text-xs text-slate-500">
-              Add ${extraBath} per extra bathroom. Homes over 1,500 sq ft are adjusted for size.
+              Recurring frequency discounts apply (weekly, bi-weekly, monthly). Add-ons are priced
+              separately in the quote wizard.
             </p>
-            <Link
-              href="/residential-cleaning"
-              className="mt-6 inline-flex text-sm font-semibold text-[#0f5c5b] hover:underline"
-            >
-              Residential cleaning details →
-            </Link>
-          </section>
-
-          <section className="card p-6">
-            <h2 className="text-xl font-bold text-slate-900">Commercial</h2>
-            <p className="mt-2 text-sm text-slate-600">Office and business cleaning by square footage.</p>
-            <ul className="mt-6 space-y-3 text-sm text-slate-700">
-              {commercialRows(config).map((row) => (
-                <li key={row.label} className="flex justify-between border-b border-slate-100 pb-2">
-                  <span>{row.label}</span>
-                  <span className="font-semibold text-[#0f5c5b]">from ${row.price}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/commercial-cleaning"
-              className="mt-6 inline-flex text-sm font-semibold text-[#0f5c5b] hover:underline"
-            >
-              Commercial cleaning details →
-            </Link>
-          </section>
-
-          <section className="card p-6">
-            <h2 className="text-xl font-bold text-slate-900">Post-Construction</h2>
-            <p className="mt-2 text-sm text-slate-600">Builder cleanup and renovation dust removal.</p>
-            <ul className="mt-6 space-y-3 text-sm text-slate-700">
-              {postRows(config).map((row) => (
-                <li key={row.label} className="flex justify-between border-b border-slate-100 pb-2">
-                  <span>{row.label}</span>
-                  <span className="font-semibold text-[#0f5c5b]">from ${row.price}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/post-construction-cleaning"
-              className="mt-6 inline-flex text-sm font-semibold text-[#0f5c5b] hover:underline"
-            >
-              Post-construction details →
-            </Link>
           </section>
         </div>
 
-        <div className="mt-10 rounded-2xl bg-[#1a7a78]/10 p-8">
-          <h2 className="text-lg font-semibold text-slate-900">Premiums &amp; add-ons</h2>
-          <ul className="mt-4 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-            <li>Extra bathrooms: +${extraBath} each</li>
-            {upliftRows.map((row) => (
-              <li key={row.label}>
-                {row.label}: ~{row.uplift}% above standard
-              </li>
-            ))}
-            <li>Airbnb / turnover: quote by size + same-day SLA</li>
-            {config.addOns.map((addOn) => (
-              <li key={addOn.key}>
-                {addOn.label}: +${addOn.price}
-              </li>
-            ))}
+        <div className="mt-12 rounded-2xl bg-[#1a7a78]/10 p-8">
+          <h2 className="text-xl font-bold text-slate-900">How quotes are built</h2>
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-slate-700">
+            <li>
+              Base = max(service minimum, round(square footage × per-sq-ft rate))
+            </li>
+            <li>
+              Plus ${bed} per bedroom and ${bath} per bathroom
+            </li>
+            <li>Optional add-ons and frequency discount applied last</li>
           </ul>
           <p className="mt-4 text-sm text-slate-600">
             Read our guides:{" "}

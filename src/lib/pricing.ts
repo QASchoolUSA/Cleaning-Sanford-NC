@@ -1,338 +1,436 @@
-export type ServiceType = "residential" | "commercial" | "post-construction";
+export type ServiceTypeId =
+  | "house"
+  | "apartment"
+  | "move"
+  | "airbnb"
+  | "post-construction"
+  | "maintenance"
+  | "deep";
 
-export type SqftBand =
-  | "under-1000"
-  | "1000-1500"
-  | "1500-2500"
-  | "2500-4000"
-  | "4000-plus";
+export type FrequencyId = "one-time" | "weekly" | "bi-weekly" | "monthly";
 
-export type LevelKey = "standard" | "deep" | "move" | "post";
+export type AddonId =
+  | "kitchen-deep"
+  | "oven"
+  | "fridge"
+  | "windows-interior"
+  | "windows-exterior"
+  | "laundry"
+  | "cabinets"
+  | "garage"
+  | "balcony"
+  | "pets";
 
-export type AddOnKey = "fridge" | "oven" | "windows" | "cabinets" | "baseboards";
-
-export type QuoteInput = {
-  serviceType: ServiceType;
-  /** 0 means studio. */
+export interface PricingInput {
+  serviceType: ServiceTypeId;
+  sqft: number;
   bedrooms: number;
-  /** Restrooms for commercial jobs. */
   bathrooms: number;
-  /** Null when the customer does not know the size. */
-  sqftBand: SqftBand | null;
-  level: LevelKey;
-  addOns: Partial<Record<AddOnKey, boolean>>;
-};
+  frequency: FrequencyId;
+  addons: AddonId[];
+}
+
+export interface PriceBreakdown {
+  base: number;
+  bedrooms: number;
+  bathrooms: number;
+  addons: number;
+  subtotal: number;
+  frequencyMultiplier: number;
+  frequencyDiscount: number;
+  total: number;
+}
 
 /**
  * Every number this site charges. Booking Broom is the source of truth; the
- * values below are what shipped and are used whenever the dashboard cannot be
- * reached, so a quote is never blocked on it.
+ * values in `DEFAULT_PRICING_CONFIG` are what shipped and are used whenever the
+ * dashboard cannot be reached, so a quote is never blocked on it.
  */
 export type PricingConfig = {
-  kind: "bedroom-band";
-  /** Price of a standard clean for a one-bathroom home of average size. */
-  bedroomBase: { bedrooms: number; price: number }[];
-  /** Each bathroom past the first. */
-  bathRate: number;
-  /** The 1,000–1,500 band is the anchor at 1.0. */
-  sqftBands: { key: SqftBand; label: string; multiplier: number }[];
-  defaultSqftBand: SqftBand;
-  commercialByBand: { key: SqftBand; value: number }[];
-  postByBand: { key: SqftBand; value: number }[];
-  levelMultipliers: { key: LevelKey; label: string; multiplier: number }[];
-  addOns: { key: AddOnKey; label: string; price: number }[];
-  maxBedrooms: number;
-  maxBathrooms: number;
-  roundToNearest: number;
-  /** Quoted range either side of the price, e.g. 0.1 for ±10%. */
-  rangeSpread: number;
+  kind: "sqft-rate-min";
+  /** Per-sq-ft rate and the floor the base can never fall below. */
+  serviceRates: { key: string; perSqft: number; minBase: number }[];
+  bedroomRate: number;
+  bathroomRate: number;
+  frequencyMultipliers: { key: string; label: string; multiplier: number }[];
+  addOns: { key: string; label: string; price: number }[];
+  /** Square footage bands; `value` is the midpoint an estimate is built from. */
+  sqftPresets: { label: string; value: number }[];
+  minSqft: number;
+  maxSqft: number;
 };
 
+/** STANDARD (list) rates — not the discounted Davenport seed numbers. */
 export const DEFAULT_PRICING_CONFIG: PricingConfig = {
-  kind: "bedroom-band",
-  bedroomBase: [
-    { bedrooms: 0, price: 99 },
-    { bedrooms: 1, price: 119 },
-    { bedrooms: 2, price: 139 },
-    { bedrooms: 3, price: 169 },
-    { bedrooms: 4, price: 199 },
-    { bedrooms: 5, price: 229 },
+  kind: "sqft-rate-min",
+  serviceRates: [
+    { key: "house", perSqft: 0.15, minBase: 129 },
+    { key: "apartment", perSqft: 0.15, minBase: 99 },
+    { key: "maintenance", perSqft: 0.15, minBase: 109 },
+    { key: "deep", perSqft: 0.2, minBase: 199 },
+    { key: "move", perSqft: 0.23, minBase: 189 },
+    { key: "airbnb", perSqft: 0.12, minBase: 149 },
+    { key: "post-construction", perSqft: 0.39, minBase: 249 },
   ],
-  bathRate: 20,
-  sqftBands: [
-    { key: "under-1000", label: "Under 1,000 sq ft", multiplier: 0.9 },
-    { key: "1000-1500", label: "1,000–1,500 sq ft", multiplier: 1 },
-    { key: "1500-2500", label: "1,500–2,500 sq ft", multiplier: 1.1 },
-    { key: "2500-4000", label: "2,500–4,000 sq ft", multiplier: 1.25 },
-    { key: "4000-plus", label: "4,000+ sq ft", multiplier: 1.4 },
-  ],
-  defaultSqftBand: "1000-1500",
-  commercialByBand: [
-    { key: "under-1000", value: 149 },
-    { key: "1000-1500", value: 199 },
-    { key: "1500-2500", value: 249 },
-    { key: "2500-4000", value: 329 },
-    { key: "4000-plus", value: 399 },
-  ],
-  postByBand: [
-    { key: "under-1000", value: 299 },
-    { key: "1000-1500", value: 379 },
-    { key: "1500-2500", value: 449 },
-    { key: "2500-4000", value: 549 },
-    { key: "4000-plus", value: 649 },
-  ],
-  levelMultipliers: [
-    { key: "standard", label: "Standard", multiplier: 1 },
-    { key: "deep", label: "Deep clean", multiplier: 1.4 },
-    { key: "move", label: "Move-in / move-out", multiplier: 1.2 },
-    { key: "post", label: "Post-construction detailing", multiplier: 1.3 },
+  bedroomRate: 18,
+  bathroomRate: 28,
+  frequencyMultipliers: [
+    { key: "one-time", label: "One-time", multiplier: 1 },
+    { key: "weekly", label: "Weekly", multiplier: 0.85 },
+    { key: "bi-weekly", label: "Bi-weekly", multiplier: 0.9 },
+    { key: "monthly", label: "Monthly", multiplier: 0.95 },
   ],
   addOns: [
-    { key: "fridge", label: "Inside fridge", price: 25 },
-    { key: "oven", label: "Inside oven", price: 25 },
-    { key: "windows", label: "Interior windows", price: 40 },
-    { key: "cabinets", label: "Inside cabinets", price: 30 },
-    { key: "baseboards", label: "Baseboards", price: 35 },
+    { key: "kitchen-deep", label: "Kitchen deep clean", price: 45 },
+    { key: "oven", label: "Oven cleaning", price: 35 },
+    { key: "fridge", label: "Fridge cleaning", price: 35 },
+    { key: "windows-interior", label: "Windows (interior)", price: 40 },
+    { key: "windows-exterior", label: "Windows (exterior)", price: 55 },
+    { key: "laundry", label: "Laundry fold & put away", price: 25 },
+    { key: "cabinets", label: "Inside cabinets", price: 40 },
+    { key: "garage", label: "Garage sweep & wipe", price: 50 },
+    { key: "balcony", label: "Patio / balcony", price: 30 },
+    { key: "pets", label: "Pet-friendly detail", price: 20 },
   ],
-  maxBedrooms: 5,
-  maxBathrooms: 4,
-  roundToNearest: 5,
-  rangeSpread: 0.1,
+  sqftPresets: [
+    { label: "Under 800 sq ft", value: 600 },
+    { label: "800\u20131,200 sq ft", value: 1000 },
+    { label: "1,200\u20132,000 sq ft", value: 1600 },
+    { label: "2,000\u20132,600 sq ft", value: 2200 },
+    { label: "2,600+ sq ft", value: 3000 },
+  ],
+  minSqft: 400,
+  maxSqft: 6000,
 };
 
-export const ADDON_KEYS: AddOnKey[] = [
-  "fridge",
-  "oven",
-  "windows",
-  "cabinets",
-  "baseboards",
+const SERVICE_TYPE_IDS: ServiceTypeId[] = [
+  "house",
+  "apartment",
+  "move",
+  "airbnb",
+  "post-construction",
+  "maintenance",
+  "deep",
 ];
 
-const SQFT_BAND_KEYS: SqftBand[] = [
-  "under-1000",
-  "1000-1500",
-  "1500-2500",
-  "2500-4000",
-  "4000-plus",
+export const ADDON_IDS: AddonId[] = [
+  "kitchen-deep",
+  "oven",
+  "fridge",
+  "windows-interior",
+  "windows-exterior",
+  "laundry",
+  "cabinets",
+  "garage",
+  "balcony",
+  "pets",
 ];
+
+const FREQUENCY_IDS: FrequencyId[] = [
+  "one-time",
+  "weekly",
+  "bi-weekly",
+  "monthly",
+];
+
+export const SERVICE_LABELS: Record<ServiceTypeId, string> = {
+  house: "House Cleaning",
+  apartment: "Apartment Cleaning",
+  maintenance: "Maintenance Cleaning",
+  deep: "Deep Cleaning",
+  move: "Move In / Move Out",
+  airbnb: "Airbnb Turnover",
+  "post-construction": "Post-Construction",
+};
 
 /**
- * Guards against a remote config that parses as JSON but is missing the bands or
- * add-ons the UI iterates over, which would otherwise render an empty picker.
+ * Guards against a remote config that parses as JSON but is missing a service,
+ * frequency or add-on the UI iterates over, which would otherwise quote $0 or
+ * render an empty picker.
  */
 export function isUsablePricingConfig(value: unknown): value is PricingConfig {
   if (!value || typeof value !== "object") return false;
   const config = value as Partial<PricingConfig>;
-  if (config.kind !== "bedroom-band") return false;
-  if (typeof config.bathRate !== "number") return false;
-  if (typeof config.roundToNearest !== "number") return false;
-  if (typeof config.rangeSpread !== "number") return false;
-
-  const hasEveryBand = (rows: { key: SqftBand }[] | undefined) =>
-    Array.isArray(rows) && SQFT_BAND_KEYS.every((key) => rows.some((r) => r.key === key));
-
-  if (!hasEveryBand(config.sqftBands)) return false;
-  if (!hasEveryBand(config.commercialByBand)) return false;
-  if (!hasEveryBand(config.postByBand)) return false;
-
-  if (
-    !Array.isArray(config.addOns) ||
-    !ADDON_KEYS.every((key) => config.addOns!.some((a) => a.key === key))
-  ) {
+  if (config.kind !== "sqft-rate-min") return false;
+  if (typeof config.bedroomRate !== "number") return false;
+  if (typeof config.bathroomRate !== "number") return false;
+  if (typeof config.minSqft !== "number") return false;
+  if (typeof config.maxSqft !== "number") return false;
+  if (!Array.isArray(config.sqftPresets) || config.sqftPresets.length === 0) {
     return false;
   }
+  if (!Array.isArray(config.serviceRates)) return false;
+  if (!Array.isArray(config.frequencyMultipliers)) return false;
+  if (!Array.isArray(config.addOns)) return false;
 
   return (
-    Array.isArray(config.bedroomBase) &&
-    config.bedroomBase.length > 0 &&
-    Array.isArray(config.levelMultipliers) &&
-    config.levelMultipliers.length > 0
+    SERVICE_TYPE_IDS.every((id) =>
+      config.serviceRates!.some((rate) => rate.key === id),
+    ) &&
+    FREQUENCY_IDS.every((id) =>
+      config.frequencyMultipliers!.some((freq) => freq.key === id),
+    ) &&
+    ADDON_IDS.every((id) => config.addOns!.some((addOn) => addOn.key === id))
   );
 }
 
-export function sqftBands(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
-  return config.sqftBands;
-}
-
-export function defaultSqftBand(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
-  return config.defaultSqftBand;
-}
-
-export function maxBedrooms(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
-  return config.maxBedrooms;
-}
-
-export function maxBathrooms(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
-  return config.maxBathrooms;
-}
-
-export function addOnLabels(
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): Record<AddOnKey, string> {
+export function frequencyLabels(
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+): Record<FrequencyId, string> {
   return Object.fromEntries(
-    config.addOns.map((a) => [a.key, a.label])
-  ) as Record<AddOnKey, string>;
+    config.frequencyMultipliers.map((freq) => [freq.key, freq.label]),
+  ) as Record<FrequencyId, string>;
 }
 
 export function addOnPrices(
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): Record<AddOnKey, number> {
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+): Record<AddonId, number> {
   return Object.fromEntries(
-    config.addOns.map((a) => [a.key, a.price])
-  ) as Record<AddOnKey, number>;
+    config.addOns.map((addOn) => [addOn.key, addOn.price]),
+  ) as Record<AddonId, number>;
 }
 
-export function levelAdjustments(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
-  return config.levelMultipliers
-    .filter((level) => level.key !== "standard")
-    .map((level) => ({
-      key: level.key,
-      label: level.label,
-      /** Percentage above a standard clean, e.g. 40 for a 1.4 multiplier. */
-      uplift: Math.round((level.multiplier - 1) * 100),
-    }));
+export function addOnLabels(
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+): Record<AddonId, string> {
+  return Object.fromEntries(
+    config.addOns.map((addOn) => [addOn.key, addOn.label]),
+  ) as Record<AddonId, string>;
 }
 
-export function sqftBandLabel(
-  band: SqftBand | null,
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): string | null {
-  return config.sqftBands.find((b) => b.key === band)?.label ?? null;
+/** The published "from $X" floor for each service. */
+export function minimumBase(
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+): Record<ServiceTypeId, number> {
+  return Object.fromEntries(
+    config.serviceRates.map((rate) => [rate.key, rate.minBase]),
+  ) as Record<ServiceTypeId, number>;
 }
 
-function sqftMultiplier(band: SqftBand | null, config: PricingConfig): number {
-  return config.sqftBands.find((b) => b.key === band)?.multiplier ?? 1;
+export function sqftPresets(config: PricingConfig = DEFAULT_PRICING_CONFIG) {
+  return config.sqftPresets;
 }
 
-export function bedroomLabel(
+export function sqftPresetLabel(
+  value: number,
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+): string {
+  const closest = config.sqftPresets.reduce((best, preset) =>
+    Math.abs(preset.value - value) < Math.abs(best.value - value) ? preset : best,
+  );
+  return closest.label;
+}
+
+export function calculatePrice(
+  input: PricingInput,
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+): PriceBreakdown {
+  const sqft = Math.max(config.minSqft, Math.min(config.maxSqft, input.sqft));
+  const bedrooms = Math.max(0, Math.min(8, input.bedrooms));
+  const bathrooms = Math.max(1, Math.min(8, input.bathrooms));
+
+  const rate = config.serviceRates.find((r) => r.key === input.serviceType);
+  const rawBase = sqft * (rate?.perSqft ?? 0);
+  const base = Math.max(rate?.minBase ?? 0, Math.round(rawBase));
+  const bedroomCost = bedrooms * config.bedroomRate;
+  const bathroomCost = bathrooms * config.bathroomRate;
+  const prices = addOnPrices(config);
+  const addonCost = input.addons.reduce(
+    (sum, id) => sum + (prices[id] ?? 0),
+    0,
+  );
+
+  const subtotal = base + bedroomCost + bathroomCost + addonCost;
+  const frequencyMultiplier =
+    config.frequencyMultipliers.find((f) => f.key === input.frequency)
+      ?.multiplier ?? 1;
+  const total = Math.round(subtotal * frequencyMultiplier);
+  const frequencyDiscount = Math.round(subtotal - total);
+
+  return {
+    base,
+    bedrooms: bedroomCost,
+    bathrooms: bathroomCost,
+    addons: addonCost,
+    subtotal,
+    frequencyMultiplier,
+    frequencyDiscount,
+    total,
+  };
+}
+
+export function propertySummary(input: {
+  bedrooms: number;
+  bathrooms: number;
+  sqft: number;
+}, config: PricingConfig = DEFAULT_PRICING_CONFIG): string {
+  const bed =
+    input.bedrooms === 0
+      ? "Studio"
+      : `${input.bedrooms} Bedroom${input.bedrooms === 1 ? "" : "s"}`;
+  const bath = `${input.bathrooms} Bath${input.bathrooms === 1 ? "" : "s"}`;
+  return `${bed} · ${bath} · ${sqftPresetLabel(input.sqft, config)}`;
+}
+
+export function selectedAddOnLines(
+  addons: AddonId[],
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+) {
+  const labels = addOnLabels(config);
+  const prices = addOnPrices(config);
+  return addons.map((key) => ({
+    label: labels[key] ?? key,
+    price: prices[key] ?? 0,
+  }));
+}
+
+const PACKAGE_HEADLINES: {
+  key: string;
+  label: string;
+  serviceType: ServiceTypeId;
+  popular?: boolean;
+}[] = [
+  { key: "standard-cleaning", label: "Standard Cleaning", serviceType: "house" },
+  {
+    key: "deep-cleaning",
+    label: "Deep Cleaning",
+    serviceType: "deep",
+    popular: true,
+  },
+  { key: "move-out-turnover", label: "Move-Out / Turnover", serviceType: "move" },
+];
+
+/** Typical 2-bed / 2-bath / ~1,000 sq ft one-time quote for marketing "from" prices. */
+function typicalHomeQuote(
+  serviceType: ServiceTypeId,
+  config: PricingConfig,
+) {
+  return calculatePrice(
+    {
+      serviceType,
+      bedrooms: 2,
+      bathrooms: 2,
+      sqft: 1000,
+      frequency: "one-time",
+      addons: [],
+    },
+    config,
+  );
+}
+
+export interface PricingHeadline {
+  key: string;
+  label: string;
+  fromPrice: number;
+  popular?: boolean;
+}
+
+export function headlineFor(
+  key: string,
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+): PricingHeadline | undefined {
+  const pkg = PACKAGE_HEADLINES.find((item) => item.key === key);
+  if (!pkg) return undefined;
+  return {
+    key: pkg.key,
+    label: pkg.label,
+    fromPrice: typicalHomeQuote(pkg.serviceType, config).total,
+    popular: pkg.popular,
+  };
+}
+
+export function fromPriceLabel(
+  key: string,
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+): string {
+  const headline = headlineFor(key, config);
+  return headline ? `From $${headline.fromPrice}` : "Get a quote";
+}
+
+/** Display range around a point estimate (±10%) for quote payloads. */
+export function estimateRange(total: number, spread = 0.1) {
+  return {
+    low: Math.round(total * (1 - spread)),
+    high: Math.round(total * (1 + spread)),
+  };
+}
+
+function houseQuote(
   bedrooms: number,
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): string {
-  if (bedrooms === 0) return "Studio";
-  if (bedrooms >= config.maxBedrooms) return `${config.maxBedrooms}+ Bedroom`;
-  return `${bedrooms} Bedroom`;
+  config: PricingConfig,
+  serviceType: ServiceTypeId = "house",
+) {
+  return calculatePrice(
+    {
+      serviceType,
+      bedrooms,
+      bathrooms: 1,
+      sqft: 1000,
+      frequency: "one-time",
+      addons: [],
+    },
+    config,
+  );
 }
 
-export function bathroomLabel(
-  bathrooms: number,
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): string {
-  return bathrooms >= config.maxBathrooms
-    ? `${config.maxBathrooms}+ Bath`
-    : `${bathrooms} Bath`;
+/** Bedroom “from” prices for marketing pages (house clean, 1 bath, ~1,000 sq ft). */
+export function residentialPrices(
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+) {
+  return {
+    studio: houseQuote(0, config).total,
+    "1bed": houseQuote(1, config).total,
+    "2bed": houseQuote(2, config).total,
+    "3bed": houseQuote(3, config).total,
+    "4plus": houseQuote(4, config).total,
+  };
 }
 
-/** "2 Bedroom · 2 Bath · 1,000–1,500 sq ft" */
-export function propertySummary(
+/**
+ * Approximate % premium of deep/move vs house for the same typical home.
+ * Kept for SEO/blog copy that still talks in “uplift” language.
+ */
+export function levelAdjustments(
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+) {
+  const standard = houseQuote(2, config, "house").total;
+  const pct = (service: ServiceTypeId) => {
+    const total = houseQuote(2, config, service).total;
+    return Math.round(((total - standard) / Math.max(standard, 1)) * 100);
+  };
+  return [
+    { key: "standard" as const, label: "Standard", uplift: 0 },
+    { key: "deep" as const, label: "Deep clean", uplift: pct("deep") },
+    { key: "move" as const, label: "Move-in / move-out", uplift: pct("move") },
+    { key: "post" as const, label: "Post-construction", uplift: pct("post-construction") },
+  ];
+}
+
+export type LevelKey = "standard" | "deep" | "move" | "post";
+
+/** Thin wrapper used by articles that still call `computeQuote`. */
+export function computeQuote(
   input: {
-    serviceType: ServiceType;
+    serviceType?: ServiceTypeId;
     bedrooms: number;
     bathrooms: number;
-    sqftBand: SqftBand | null;
+    sqft?: number;
+    frequency?: FrequencyId;
+    addons?: AddonId[];
   },
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): string {
-  const parts =
-    input.serviceType === "residential"
-      ? [
-          bedroomLabel(input.bedrooms, config),
-          bathroomLabel(input.bathrooms, config),
-        ]
-      : [`${input.bathrooms} restroom${input.bathrooms === 1 ? "" : "s"}`];
-
-  const band = sqftBandLabel(input.sqftBand, config);
-  if (band) parts.push(band);
-  return parts.join(" · ");
-}
-
-export function computeQuote(
-  input: QuoteInput,
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
 ) {
-  const extraBaths = Math.max(0, input.bathrooms - 1) * config.bathRate;
-  const band = input.sqftBand;
-  const fallbackBand: SqftBand = "1500-2500";
-
-  let base = 0;
-  if (input.serviceType === "residential") {
-    const bedrooms = Math.min(Math.max(input.bedrooms, 0), config.maxBedrooms);
-    const bedBase =
-      config.bedroomBase.find((b) => b.bedrooms === bedrooms)?.price ?? 119;
-    base = (bedBase + extraBaths) * sqftMultiplier(band, config);
-  }
-  if (input.serviceType === "commercial") {
-    const row = config.commercialByBand.find(
-      (b) => b.key === (band ?? fallbackBand)
-    );
-    base = (row?.value ?? 0) + extraBaths;
-  }
-  if (input.serviceType === "post-construction") {
-    base =
-      config.postByBand.find((b) => b.key === (band ?? fallbackBand))?.value ?? 0;
-  }
-
-  const multiplier =
-    config.levelMultipliers.find((l) => l.key === input.level)?.multiplier ?? 1;
-
-  const prices = addOnPrices(config);
-  const addOnsTotal = Object.entries(input.addOns).reduce((sum, [key, enabled]) => {
-    if (!enabled) return sum;
-    return sum + (prices[key as AddOnKey] ?? 0);
-  }, 0);
-
-  const step = config.roundToNearest > 0 ? config.roundToNearest : 1;
-  const price = Math.round((base * multiplier + addOnsTotal) / step) * step;
-  const low = Math.round(price * (1 - config.rangeSpread));
-  const high = Math.round(price * (1 + config.rangeSpread));
-
-  return { base, multiplier, addOnsTotal, price, range: { low, high } };
-}
-
-/** Add-ons formatted for the Booking Broom `quote.add_ons` field. */
-export function selectedAddOnLines(
-  addOns: QuoteInput["addOns"],
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-) {
-  return config.addOns
-    .filter((addOn) => addOns[addOn.key])
-    .map((addOn) => ({ label: addOn.label, price: addOn.price }));
-}
-
-/** Marketing-page tables keep their original keys so published copy stays stable. */
-export function residentialPrices(
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): Record<string, number> {
-  const base = (bedrooms: number) =>
-    config.bedroomBase.find((b) => b.bedrooms === bedrooms)?.price ?? 0;
-  return {
-    studio: base(0),
-    "1bed": base(1),
-    "2bed": base(2),
-    "3bed": base(3),
-    "4plus": base(4),
-  };
-}
-
-export function commercialPrices(
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): Record<string, number> {
-  const byBand = (key: SqftBand) =>
-    config.commercialByBand.find((b) => b.key === key)?.value ?? 0;
-  return {
-    small: byBand("under-1000"),
-    medium: byBand("1500-2500"),
-    large: byBand("4000-plus"),
-  };
-}
-
-export function postPrices(
-  config: PricingConfig = DEFAULT_PRICING_CONFIG
-): Record<string, number> {
-  const byBand = (key: SqftBand) =>
-    config.postByBand.find((b) => b.key === key)?.value ?? 0;
-  return {
-    under1k: byBand("under-1000"),
-    "1k-2k": byBand("1500-2500"),
-    over2k: byBand("4000-plus"),
-  };
+  const breakdown = calculatePrice(
+    {
+      serviceType: input.serviceType ?? "house",
+      bedrooms: input.bedrooms,
+      bathrooms: input.bathrooms,
+      sqft: input.sqft ?? 1000,
+      frequency: input.frequency ?? "one-time",
+      addons: input.addons ?? [],
+    },
+    config,
+  );
+  const range = estimateRange(breakdown.total);
+  return { ...breakdown, price: breakdown.total, range };
 }
