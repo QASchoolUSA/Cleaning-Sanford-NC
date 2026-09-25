@@ -85,6 +85,7 @@ export default function MobileNav() {
               <div className="my-2 h-px bg-slate-100" />
               <Link href="/pricing" className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>Pricing</Link>
               <Link href="/areas/jonesboro" className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>Service Areas</Link>
+              <Link href="/communities" className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>Communities</Link>
               <Link href="/blog" className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>Blog</Link>
               <Link href="/about" className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>About</Link>
               <Link href="/#benefits" className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>Why Us</Link>
